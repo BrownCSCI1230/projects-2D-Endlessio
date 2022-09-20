@@ -82,6 +82,13 @@ MainWindow::MainWindow()
     // clearing canvas
     addPushButton(brushLayout, "Clear canvas", &MainWindow::onClearButtonClick);
 
+    // my fun exploration
+    addHeading(brushLayout, "My Fun Exploration");
+    addPushButton(brushLayout, "Undo One Stroke", &MainWindow::onPrevButtonClick);
+    addRadioButton(brushLayout, "Eraser", settings.brushType == BRUSH_ERASER, [this]{ setBrushType(BRUSH_ERASER); });
+//    addRadioButton(brushLayout, "Color Picker", settings.brushType == BRUSH_COLOR_PICKER, [this]{ setBrushType(BRUSH_COLOR_PICKER); });
+
+
     // filters
     addHeading(filterLayout, "Filter");
     addRadioButton(filterLayout, "Edge detect", settings.filterType == FILTER_EDGE_DETECT,  [this]{ setFilterType(FILTER_EDGE_DETECT); });
@@ -168,6 +175,9 @@ void MainWindow::addSpinBox(QBoxLayout *layout, QString text, int min, int max, 
     layout->addLayout(subLayout);
     connect(box, static_cast<void(QSpinBox::*)(int)>(&QSpinBox::valueChanged),
             this, function);
+//    connect(m_canvas, &Canvas2D::pickColorChanged,
+//            box, box->setValue(23));
+    std::cout << &Canvas2D::pickColorChanged << std::endl;
 }
 
 void MainWindow::addDoubleSpinBox(QBoxLayout *layout, QString text, double min, double max, double step, double val, int decimal, auto function) {
@@ -238,6 +248,10 @@ void MainWindow::setBoolVal(bool &setValue, bool newValue) {
 void MainWindow::onClearButtonClick() {
     m_canvas->resize(m_canvas->parentWidget()->size().width(), m_canvas->parentWidget()->size().height());
     m_canvas->clearCanvas();
+}
+
+void MainWindow::onPrevButtonClick() {
+    m_canvas->prevCanvas();
 }
 
 void MainWindow::onFilterButtonClick() {

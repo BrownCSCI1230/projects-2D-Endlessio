@@ -42,6 +42,7 @@ private slots:
     void setBoolVal(bool &setValue, bool newValue);
 
     void onClearButtonClick();
+    void onPrevButtonClick();
     void onFilterButtonClick();
     void onRevertButtonClick();
     void onUploadButtonClick();

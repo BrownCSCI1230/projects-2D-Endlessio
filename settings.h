@@ -21,6 +21,8 @@ enum BrushType {
     BRUSH_SPEED,
     BRUSH_FILL,
     BRUSH_CUSTOM,
+    BRUSH_ERASER,
+    BRUSH_COLOR_PICKER,
     NUM_BRUSH_TYPES
 };
 

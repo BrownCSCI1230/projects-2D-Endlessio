@@ -177,7 +177,7 @@ void MainWindow::addSpinBox(QBoxLayout *layout, QString text, int min, int max, 
             this, function);
 //    connect(m_canvas, &Canvas2D::pickColorChanged,
 //            box, box->setValue(23));
-    std::cout << &Canvas2D::pickColorChanged << std::endl;
+//    std::cout << &Canvas2D::pickColorChanged << std::endl;
 }
 
 void MainWindow::addDoubleSpinBox(QBoxLayout *layout, QString text, double min, double max, double step, double val, int decimal, auto function) {

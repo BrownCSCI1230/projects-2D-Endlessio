@@ -342,5 +342,5 @@ void Canvas2D::fillBucket(int col, int row, RGBA target_color) {
 
 void Canvas2D::pickColor(int col, int row) {
     settings.brushColor = m_data[pos2index(col, row, m_width)];
-    emit pickColorChanged(10);
+//    emit pickColorChanged(10);
 }

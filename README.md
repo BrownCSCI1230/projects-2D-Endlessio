@@ -50,7 +50,7 @@ the deque structure is chosen because we follow a "LRU" base to evict the oldest
 
 - Distance Check: the rule author followed here is first use Euclidean Rule calculate two point distance, after rounding the distance, if the distance is smaller than or equal to brush radius, then inlcude that point (mark with certain value in the mask)
 
-  ![截屏2022-09-20 下午10.08.58](/Users/endlessio/CS1230/projects-2D-Endlessio/report_images/截屏2022-09-20 下午10.08.58.png)
+  ![截屏2022-09-20 下午10.08.58](./report_images/截屏2022-09-20 下午10.08.58.png)
 
 - Constant Brush: if the distance is <= brush radius, fill the vector index with 1.0.
 
@@ -70,7 +70,7 @@ the deque structure is chosen because we follow a "LRU" base to evict the oldest
 
   - the writer chooses BFS here for two reasons: (1) better for later feature, if we want to realize tolerance for the fill bucket later, BFS is intuitively more reasonabke. (2) the implementation of BFS is queue maintained by the developer, thus will not encounter the overflow problem compared to the recursion version of DFS (of course we can also manually maintain a stack for DFS to avoid exceed max recuision problem)
 
-    ![截屏2022-09-20 下午10.07.15](/Users/endlessio/CS1230/projects-2D-Endlessio/report_images/截屏2022-09-20 下午10.07.15.png)
+    ![截屏2022-09-20 下午10.07.15](./report_images/截屏2022-09-20 下午10.07.15.png)
 
 - Spray
 
@@ -78,11 +78,11 @@ the deque structure is chosen because we follow a "LRU" base to evict the oldest
 
   - then since density is also in the range of 0 to 100, we can see density (with certain proportion) as a threshold.
 
-    ![截屏2022-09-20 下午10.06.49](/Users/endlessio/CS1230/projects-2D-Endlessio/report_images/截屏2022-09-20 下午10.06.49.png)
+    ![截屏2022-09-20 下午10.06.49](./report_images/截屏2022-09-20 下午10.06.49.png)
 
   - then when using the for loop to go through the brush mask (being set to 1 if in distance), we apply the random function above to see if it is a hit (over threshold), if it is a hit, we do not show the pixel by overriding the mask intensity to 0 (you can also implement the reverse version)
 
-    ![截屏2022-09-20 下午10.06.35](/Users/endlessio/CS1230/projects-2D-Endlessio/report_images/截屏2022-09-20 下午10.06.35.png)
+    ![截屏2022-09-20 下午10.06.35](./report_images/截屏2022-09-20 下午10.06.35.png)
 
 ### My Fun Exploration Part
 
@@ -94,7 +94,7 @@ the deque structure is chosen because we follow a "LRU" base to evict the oldest
 
   - the brush type can be constant ("hard" eraser), can also to linear ("soft" eraser)
 
-    ![截屏2022-09-20 下午10.06.54](/Users/endlessio/CS1230/projects-2D-Endlessio/report_images/截屏2022-09-20 下午10.06.54.png)
+    ![截屏2022-09-20 下午10.06.54](./report_images/截屏2022-09-20 下午10.06.54.png)
 
 - Undo One Stroke
 
@@ -104,7 +104,7 @@ the deque structure is chosen because we follow a "LRU" base to evict the oldest
 
   - cool, now the problem is trade-off between experience and efficiency: do we want to store every stroke from the beginning? it will provide user more accessibility but it has large space complexity. So here, the writer chose to make the max depth be 5, that is, when the queue length is larger than max depth, we pop out the oldest one (popright) in the deque, and push the new one (pushleft)
 
-    ![截屏2022-09-20 下午10.11.57](/Users/endlessio/CS1230/projects-2D-Endlessio/report_images/截屏2022-09-20 下午10.11.57.png)
+    ![截屏2022-09-20 下午10.11.57](./report_images/截屏2022-09-20 下午10.11.57.png)
 
   - so the whole process is when mouse up, push the current canvas into deque, when undo buttom is clicked, pop the most recent canvas data (popleft)
 

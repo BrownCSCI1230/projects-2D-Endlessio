@@ -46,5 +46,7 @@ private slots:
     void onFilterButtonClick();
     void onRevertButtonClick();
     void onUploadButtonClick();
+
+//    void colorPicker(QSpinBox *box, int val);
 };
 #endif // MAINWINDOW_H

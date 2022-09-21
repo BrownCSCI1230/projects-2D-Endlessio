@@ -2,6 +2,19 @@
 
 All project handouts can be found [here](https://browncsci1230.github.io/projects).
 
+**Content**
+
+- Brush
+  - introduction
+  - Principle Data Structure
+  - Principle Function Implementation
+    - Basic Part
+    - Extra Credit Part
+    - My Fun Exploration Part :)
+
+- Filter
+  - TODO
+
 
 
 # Part 1: Brush
@@ -92,7 +105,13 @@ the deque structure is chosen because we follow a "LRU" base to evict the oldest
 
     ![截屏2022-09-20 下午10.06.35](./report_images/brush_spray.png)
 
-### My Fun Exploration Part
+
+
+### My Fun Exploration Part :)
+
+- **the GUI of this part is at the bottom, notice the color picker is not visible here because there still have some issue**
+
+![my_fun_part_ui](./report_images/my_fun_part_ui.png)
 
 - Eraser
 
@@ -103,6 +122,20 @@ the deque structure is chosen because we follow a "LRU" base to evict the oldest
   - the brush type can be constant ("hard" eraser), can also to linear ("soft" eraser)
 
     ![截屏2022-09-20 下午10.06.54](./report_images/brush_eraser.png)
+
+- Eraser Connected
+
+  - similar to the app notability eraser continuous
+
+  - when click, erase all of the connected "strokes", personally find this one is efficient for painting and fun hahaha
+
+  - algorithm is simple and straight forward: BFS, DFS or Union Find
+
+  - here the writer chose the BFS one with the similar reason to the fill bucket
+
+    ![eraser_connect](./report_images/eraser_connect.png)
+
+    
 
 - Undo One Stroke
 
@@ -118,5 +151,20 @@ the deque structure is chosen because we follow a "LRU" base to evict the oldest
 
     ![截屏2022-09-20 下午10.12.23](./report_images/prev_canvas.png)
 
+- Color Picker
 
+  - what the writer wants to implement here, when we mix some color, and we want to obtain the RGB color of the current color
 
+  - the algorithm is naive, it is just get the current color when clicking mouse to pick (mouse down), and write it to brush color
+
+  - the tricky part is how to reversely connect the GUI spinbox and settings.brush_color. Currently what we have for GUI is connect the spinbox for colors with the settings.brush_color by using signal and slot 
+
+  - After talking to the TA, the writer understands that the proper should be modifing the QSpinBox, however, that is out of the scope of the code for this project (credit to Jianxin Gu)
+
+  - the writer also tried to define slots under mainwindow class, but failed
+
+    ![color_picker](/Users/endlessio/CS1230/projects-2D-Endlessio/report_images/color_picker.png)
+
+    ![slot_mainwin_color_picker](/Users/endlessio/CS1230/projects-2D-Endlessio/report_images/slot_mainwin_color_picker.png)![pick_color_mainwin_spinbox](/Users/endlessio/CS1230/projects-2D-Endlessio/report_images/pick_color_mainwin_spinbox.png)
+
+    

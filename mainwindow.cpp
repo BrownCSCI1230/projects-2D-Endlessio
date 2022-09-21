@@ -87,7 +87,7 @@ MainWindow::MainWindow()
     addPushButton(brushLayout, "Undo One Stroke", &MainWindow::onPrevButtonClick);
     addRadioButton(brushLayout, "Eraser", settings.brushType == BRUSH_ERASER, [this]{ setBrushType(BRUSH_ERASER); });
 //    addRadioButton(brushLayout, "Color Picker", settings.brushType == BRUSH_COLOR_PICKER, [this]{ setBrushType(BRUSH_COLOR_PICKER); });
-
+    addRadioButton(brushLayout, "Eraser Connected", settings.brushType == BRUSH_ERASER_CONNECTED, [this]{ setBrushType(BRUSH_ERASER_CONNECTED); });
 
     // filters
     addHeading(filterLayout, "Filter");
@@ -176,8 +176,7 @@ void MainWindow::addSpinBox(QBoxLayout *layout, QString text, int min, int max, 
     connect(box, static_cast<void(QSpinBox::*)(int)>(&QSpinBox::valueChanged),
             this, function);
 //    connect(m_canvas, &Canvas2D::pickColorChanged,
-//            box, box->setValue(23));
-//    std::cout << &Canvas2D::pickColorChanged << std::endl;
+//            this, &MainWindow::colorPicker(box, val)));
 }
 
 void MainWindow::addDoubleSpinBox(QBoxLayout *layout, QString text, double min, double max, double step, double val, int decimal, auto function) {
@@ -273,3 +272,7 @@ void MainWindow::onUploadButtonClick() {
 
     m_canvas->settingsChanged();
 }
+
+//void MainWindow::colorPicker(QSpinBox *box, int val) {
+//    box->setValue(val);
+//}

@@ -124,6 +124,12 @@ void Canvas2D::mouseDown(int x, int y) {
         pickColor(x, y);
         return;
     }
+    if (settings.brushType == BRUSH_ERASER_CONNECTED) {
+        eraserConnected(x, y);
+        displayImage();
+        return;
+    }
+
     drawStamp(x-settings.brushRadius, y-settings.brushRadius);
     displayImage();
 }
@@ -251,6 +257,8 @@ void Canvas2D::updateBrush(Settings settings) {
             }
         }
         break;
+    case BRUSH_ERASER_CONNECTED:
+      break;
       default:
         std::cout << "INVALID BRUSH TYPE";
     }
@@ -344,3 +352,30 @@ void Canvas2D::pickColor(int col, int row) {
     settings.brushColor = m_data[pos2index(col, row, m_width)];
 //    emit pickColorChanged(10);
 }
+
+void Canvas2D::eraserConnected(int col, int row) {
+    queue<vector<int>> q;
+    vector<vector<int>> v(m_height,vector<int>(m_width,0));
+    q.push({row, col});
+
+    int dir_row[4] = {0,1,0,-1};
+    int dir_col[4] = {1,0,-1,0};
+    while (q.size()) {
+        int cur_row = q.front()[0];
+        int cur_col = q.front()[1];
+        int cur_idx = pos2index(cur_col, cur_row, m_width);
+        q.pop();
+        RGBA cur_color = m_data[cur_idx];
+        if (!_check_color(cur_color, init_color)) {
+            m_data[cur_idx] = init_color;
+            for (int i=0;i<4;i++) {
+                int nr=cur_row+dir_row[i],nc=cur_col+dir_col[i];
+                if (nr>=0 && nc>=0 && nr!=m_height && nc!=m_width && v[nr][nc]==0) {
+                    v[nr][nc]=1;
+                    q.push({nr,nc});
+                }
+            }
+        }
+    }
+}
+

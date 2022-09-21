@@ -76,6 +76,7 @@ private:
     void fillBucket(int col, int row, RGBA target_color);
     // my fun exploration
     void pickColor(int col, int row);
+    void eraserConnected(int col, int row);
 
 signals:
     void pickColorChanged(int val);

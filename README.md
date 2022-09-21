@@ -70,7 +70,7 @@ the deque structure is chosen because we follow a "LRU" base to evict the oldest
 
   - the writer chooses BFS here for two reasons: (1) better for later feature, if we want to realize tolerance for the fill bucket later, BFS is intuitively more reasonabke. (2) the implementation of BFS is queue maintained by the developer, thus will not encounter the overflow problem compared to the recursion version of DFS (of course we can also manually maintain a stack for DFS to avoid exceed max recuision problem)
 
-    ![截屏2022-09-20 下午10.07.15](./report_images/截屏2022-09-20 下午10.07.15.png)
+    ![截屏2022-09-20 下午10.07.15](./report_images/fill_bucket.png)
 
 - Spray
 

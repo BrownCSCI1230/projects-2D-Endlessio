@@ -24,6 +24,7 @@ public:
     void clearCanvas();
     bool loadImageFromFile(const QString &file);
     void displayImage();
+    void myDisplayImage(std::vector<RGBA> &data, int width, int height);
     void resize(int w, int h);
 
     // This will be called when the settings have changed
@@ -61,7 +62,7 @@ private:
         mouseUp(static_cast<int>(x), static_cast<int>(y));
     }
 
-    // helper function
+    // helper function - Brush
     int pos2index(int x, int y, int width);
     std::vector<int> index2pos(int index, int width);
     uint8_t float2int(float intensity);
@@ -78,6 +79,24 @@ private:
     void pickColor(int col, int row);
     void eraserConnected(int col, int row);
 
+    // helper function - Filter
+    std::vector<float> createBlurFilter();
+
+    std::vector<RGBA> getEdgeMagnitude(std::vector<RGBA> &x, std::vector<RGBA> &y);
+    std::vector<RGBA> getScaledImageX(std::vector<RGBA> &data, int input_width, int input_height, float scaleX, int output_width, int output_height);
+    std::vector<RGBA> getScaledImageY(std::vector<RGBA> &data, int input_width, int input_height, float scaleY, int output_width, int output_height);
+
+    std::vector<RGBA> convolve2D(std::vector<RGBA> &data, std::vector<float> &filter, int filter_width, int filter_height, bool edge_flag);
+
+    void updateCanvas(std::vector<RGBA> &data);
+    void filterGray(std::vector<RGBA> &data);
+    RGBA getPixelReflected(std::vector<RGBA> &data, int width, int height, int x, int y);
+
+    // Extra Credit - Filter
+    std::vector<RGBA> convolve2D_medium(std::vector<RGBA> &data, int radius);
+    RGBA getMedium(size_t centerIndex, int row, int col, int radius);
+    std::vector<RGBA> convolve2D_bilateral(std::vector<RGBA> &data, int radius, double sigma_s, double sigma_r);
+    void apply_bilateral(std::vector<RGBA> &m_data, std::vector<RGBA> &result, int row, int col, double sigma_s, double sigma_r, int radius);
 signals:
     void pickColorChanged(int val);
 };

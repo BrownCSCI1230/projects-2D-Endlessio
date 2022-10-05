@@ -13,7 +13,9 @@ All project handouts can be found [here](https://browncsci1230.github.io/project
     - My Fun Exploration Part :)
 
 - Filter
-  - TODO
+  - Introduction
+  - Basic Implementation
+  - Extra Credit Implementation
 
 
 
@@ -163,8 +165,88 @@ the deque structure is chosen because we follow a "LRU" base to evict the oldest
 
   - the writer also tried to define slots under mainwindow class, but failed
 
-    ![color_picker](/Users/endlessio/CS1230/projects-2D-Endlessio/report_images/color_picker.png)
+    ![color_picker](./report_images/color_picker.png)
 
-    ![slot_mainwin_color_picker](/Users/endlessio/CS1230/projects-2D-Endlessio/report_images/slot_mainwin_color_picker.png)![pick_color_mainwin_spinbox](/Users/endlessio/CS1230/projects-2D-Endlessio/report_images/pick_color_mainwin_spinbox.png)
+    ![slot_mainwin_color_picker](./report_images/slot_mainwin_color_picker.png)![pick_color_mainwin_spinbox](/Users/endlessio/CS1230/projects-2D-Endlessio/report_images/pick_color_mainwin_spinbox.png)
 
     
+
+
+
+# Part 2: Filter
+
+## Introduction
+
+In this part, a few common image processing algorithms using **convolution** to create filters. 
+
+
+
+## Basic Implementation
+
+### Blur
+
+Since 2D Gaussian Filter can be separated into two 1D kernel, therefore the writer implemented two-pass 1D blur. 
+
+The process is as the following:
+
+- Create blur filter using the current pixel offset (to the center) as $x$, blur radius divided by 3 as $\sigma$ in Gaussian function to calculate the corresponding Gaussian value in the filter.
+
+  ![create_blur_filter](./report_images/create_blur_filter.png)
+
+- apply the 1D filter two pass to the image, note to keep a variable to record filter value weight sum, such that we can apply normalization.
+
+
+
+### Edge Detection
+
+- we have already known the 2D edge filter, and how that can be divided into two 1D filter. Thus we can see the edge detection filter process to be four pass of 1D filter 
+
+![edge_filter](./report_images/edge_filter.png)
+
+- also we might want to set a flag for our convolution function, to denote it is edge detection, such that we can deal with the possibility that the pixel value might > 255 or < 0: when exceed 255, we need to set it to 255; when smaller than zero, we want to take the absolute value.
+- also notice we don't need to normalize when it is a edge filter.
+
+![edge_flag](./report_images/edge_flag.png)
+
+
+
+### Scaling
+
+we also make the scaling process a two-pass process to improve the efficiency.
+
+- Scale by X axis
+- Scale by Y axis
+
+these two scale pass are similar, the basic idea is for every point in the output image, we calculate the left (top) boundary and right (down) boundary for sampling. Then, for each point in the range, we use triangle to calculate the sample weight and accumulate them together. Finally, when we obtain the accumulated value for three channels, we normalize them by the accumulated weight sum.
+
+- One thing to notice here is for x and y direction, we have different boundary (one for width and one for height)
+
+
+
+## Extra Credit Implementation
+
+### Medium
+
+- the idea is straight forward, for each color channel and given filter size, we find the medium value for each convolution
+- okay, how should we implement the find medium value process for each convolution? If we have a array with size $k$, what we want is the $(k-1)/2$ - th largest element (the medium). We can use ugly brute force way to get the array and sort to get the element which gives us $klogk$, or we can use heap or quick select elegantly.
+- The writer choose the heap method
+
+![medium_filter](./report_images/medium_filter.png)
+
+
+
+### Bilateral Smoothing
+
+this one is auctually similar to Gaussian smooth
+
+- Iterate every point of the image, and apply bilateral
+- each time when apply bilateral
+  - iterate the filter size
+  - calculate two Gaussian weight
+    - space gaussian: $x$ input is the distance of the current pixel position and center pixel position
+    - range gaussian: $x$ input is the value difference between center pixel and current pixel
+  - accumulate the sum for three channels
+  - accumulate the sum of the weight: space gaussian weight $\times$ range gaussian weight
+  - normalize three channels with each accumulate weight sum
+
+![bilateral](./report_images/bilateral.png)

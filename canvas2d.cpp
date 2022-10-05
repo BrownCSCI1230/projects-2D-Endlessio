@@ -74,6 +74,19 @@ void Canvas2D::displayImage() {
     update();
 }
 
+
+/**
+ * @brief Get Canvas2D's image data and display this to the GUI
+ */
+void Canvas2D::myDisplayImage(vector<RGBA> &data, int width, int height) {
+    QByteArray* img = new QByteArray(reinterpret_cast<const char*>(data.data()), 4*data.size());
+    QImage now = QImage((const uchar*)img->data(), width, height, QImage::Format_RGBX8888);
+    setPixmap(QPixmap::fromImage(now));
+    setFixedSize(width, height);
+    update();
+}
+
+
 /**
  * @brief Canvas2D::resize resizes canvas to new width and height
  * @param w
@@ -83,15 +96,380 @@ void Canvas2D::resize(int w, int h) {
     m_width = w;
     m_height = h;
     m_data.resize(w * h);
-    displayImage();
+//    displayImage();
 }
+
 
 /**
  * @brief Called when the filter button is pressed in the UI
  */
 void Canvas2D::filterImage() {
     // Filter TODO: apply the currently selected filter to the loaded image
+    switch (settings.filterType) {
+      case FILTER_BLUR: {
+        std::vector<float> filter = createBlurFilter();
+        int filter_width = settings.blurRadius*2+1;
+        int filter_height = 1;
+        auto first_pass = convolve2D(m_data, filter, filter_width, filter_height, false);
+        auto second_pass = convolve2D(first_pass, filter, filter_height, filter_width, false);
+        updateCanvas(second_pass);
+        displayImage();
+        break;
+      }
+      case FILTER_EDGE_DETECT: {
+        filterGray(m_data);
+        std::vector<float> sobel_x_row = {-1, 0, 1};
+        std::vector<float> sobel_x_col = {1, 2, 1};
+        auto first_pass_x = convolve2D(m_data, sobel_x_row, 3, 1, true);
+        auto second_pass_x = convolve2D(first_pass_x, sobel_x_col, 1, 3, true);
+        std::vector<float> sobel_y_row = {1, 2, 1};
+        std::vector<float> sobel_y_col = {1, 0, -1};
+        auto first_pass_y = convolve2D(m_data, sobel_y_row, 3, 1, true);
+        auto second_pass_y = convolve2D(first_pass_y, sobel_y_col, 1, 3, true);
+
+        auto result = getEdgeMagnitude(second_pass_x, second_pass_y);
+        updateCanvas(result);
+        displayImage();
+        break;
+      }
+      case FILTER_SCALE: {
+        int output_width = round(m_width*settings.scaleX);
+        int output_height = round(m_height*settings.scaleY);
+        auto scaledX = getScaledImageX(m_data, m_width, m_height, settings.scaleX, output_width, m_height);
+        auto scaledY = getScaledImageY(scaledX, output_width, m_height, settings.scaleY, output_width, output_height);
+        resize(output_width, output_height);
+        updateCanvas(scaledY);
+        displayImage();
+        break;
+      }
+      case FILTER_MEDIAN: {
+        vector<RGBA> res = convolve2D_medium(m_data, settings.medianRadius);
+        updateCanvas(res);
+        displayImage();
+        break;
+      }
+      case FILTER_BILATERAL: {
+        double sigma_s = 3.0;
+        double sigma_r = 0.1;
+        vector<RGBA> res = convolve2D_bilateral(m_data, settings.bilateralRadius, sigma_s, sigma_r);
+        updateCanvas(res);
+        displayImage();
+        break;
+      }
+      default:{
+        cout << "not implemented" << endl;
+      }
+    }
 }
+
+uint8_t _get_medium_color(priority_queue <int>& heap){
+    int size = (heap.size()-1)/2;
+    while (heap.size()>size) {
+        heap.pop();
+    }
+    return heap.top();
+}
+
+RGBA Canvas2D::getMedium(size_t centerIndex, int row, int col, int radius) {
+    RGBA medium_color;
+    priority_queue <int> red_heap;
+    priority_queue <int> green_heap;
+    priority_queue <int> blue_heap;
+    for (int r = -radius; r<=radius; r++) {
+        for (int c = -radius; c<=radius; c++) {
+            auto n_r = row+r;
+            auto n_c = col+r;
+            RGBA canvas_color;
+            if (n_r>=0 && n_r<m_height && n_c>=0 && n_c<m_width) {
+                canvas_color = m_data[n_r*m_width + n_c];
+            } else {
+                continue;
+            }
+            red_heap.push(canvas_color.r);
+            green_heap.push(canvas_color.g);
+            blue_heap.push(canvas_color.b);
+        }
+    }
+    medium_color = {_get_medium_color(red_heap), _get_medium_color(green_heap), _get_medium_color(blue_heap), 255};
+    return medium_color;
+}
+
+vector<RGBA> Canvas2D::convolve2D_medium(std::vector<RGBA> &data, int radius) {
+    std::vector<RGBA> result(data.size());
+    for (int r = 0; r < m_height; r++) {
+        for (int c = 0; c < m_width; c++) {
+            size_t centerIndex = r * m_width + c;
+            RGBA medium_color = getMedium(centerIndex, r, c, radius);
+            result[centerIndex] = medium_color;
+         }
+    }
+    return result;
+}
+
+
+inline std::uint8_t floatToUint8(float x) {
+    return round(x * 255.f);
+}
+
+
+float triangle(float x, float a) {
+    float r = a < 1 ? 1.0 / a : 1.0;
+    if ((x < -r) || (x > r)) {
+        return 0.0;
+    } else {
+        return (1.0 - fabs(x) / r) / r;
+    }
+}
+
+std::vector<RGBA> Canvas2D::getScaledImageY(std::vector<RGBA> &data, int input_width, int input_height, float scaleY, int output_width, int output_height) {
+    std::vector<RGBA> result(output_width*output_height);
+    float supportY = (scaleY > 1.0) ? 1.0 : 1.0 / scaleY;
+    float center;
+    int cur_idx;
+    for (int row = 0; row < output_height; row ++ ){
+        for (int col = 0; col < output_width; col ++ ){
+            float weights_sum = 0.0;
+            float center = row / scaleY + (1 - scaleY) / (2 * scaleY);
+            int left = ceil(center - supportY);
+            int right = floor(center + supportY);
+            float acc_r = 0.0;
+            float acc_g = 0.0;
+            float acc_b = 0.0;
+            for (int idx = left; idx <= right; idx ++) {
+                if (idx>=0 && idx<input_height) {
+                    cur_idx = idx*input_width+col;
+                    RGBA cur_color = data[cur_idx];
+                    weights_sum += triangle(idx - center, scaleY);
+                    acc_r += triangle(idx - center, scaleY) * (cur_color.r / 255.0);
+                    acc_b += triangle(idx - center, scaleY) * (cur_color.b / 255.0);
+                    acc_g += triangle(idx - center, scaleY) * (cur_color.g / 255.0);
+                }
+            }
+            auto n_r = floatToUint8(acc_r/weights_sum);
+            auto n_g = floatToUint8(acc_g/weights_sum);
+            auto n_b = floatToUint8(acc_b/weights_sum);
+            result[row * output_width + col] = RGBA{n_r, n_g, n_b, 255};
+        }
+    }
+    return result;
+}
+
+std::vector<RGBA> Canvas2D::getScaledImageX(std::vector<RGBA> &data, int input_width, int input_height, float scaleX, int output_width, int output_height) {
+    std::vector<RGBA> result(output_width*output_height);
+    float supportX = (scaleX > 1.0) ? 1.0 : 1.0 / scaleX;
+    float center;
+    int cur_idx;
+    for (int row = 0; row < input_height; row ++ ){
+        for (int col = 0; col < output_width; col ++ ){
+            float weights_sum = 0.0;
+            float center = col / scaleX + (1 - scaleX) / (2 * scaleX);
+            int left = ceil(center - supportX);
+            int right = floor(center + supportX);
+            float acc_r = 0.0;
+            float acc_g = 0.0;
+            float acc_b = 0.0;
+            for (int idx = left; idx <= right; idx ++) {
+                if (idx>=0 && idx<input_width) {
+                    cur_idx = row*input_width+idx;
+                    RGBA cur_color = data[cur_idx];
+                    weights_sum += triangle(idx - center, scaleX);
+                    acc_r += triangle(idx - center, scaleX) * (cur_color.r / 255.0);
+                    acc_b += triangle(idx - center, scaleX) * (cur_color.b / 255.0);
+                    acc_g += triangle(idx - center, scaleX) * (cur_color.g / 255.0);
+                }
+            }
+            auto n_r = floatToUint8(acc_r/weights_sum);
+            auto n_g = floatToUint8(acc_g/weights_sum);
+            auto n_b = floatToUint8(acc_b/weights_sum);
+            result[row * output_width + col] = RGBA{n_r, n_g, n_b, 255};
+        }
+    }
+    return result;
+}
+
+
+std::uint8_t rgbaToGray(const RGBA &pixel) {
+    std::uint8_t intensity = 0.299*pixel.r + 0.587*pixel.g + 0.114*pixel.b;
+    return intensity;
+}
+
+void Canvas2D::filterGray(std::vector<RGBA> &data) {
+    for (int i = 0; i<m_data.size(); i++) {
+        RGBA &currentPixel = m_data[i];
+
+        std::uint8_t gray_pixel = rgbaToGray(currentPixel);
+        currentPixel.r = gray_pixel;
+        currentPixel.g = gray_pixel;
+        currentPixel.b = gray_pixel;
+    }
+}
+
+vector<RGBA> Canvas2D::getEdgeMagnitude(std::vector<RGBA> &x, std::vector<RGBA> &y) {
+    float s = settings.edgeDetectSensitivity;
+    std::vector<RGBA> result(m_data.size());
+    for (int i = 0; i < m_data.size(); i++) {
+        float mag = s * sqrt(pow(x[i].r, 2) + pow(y[i].r, 2));
+        result[i].r = mag;
+        result[i].g = mag;
+        result[i].b = mag;
+    }
+    return result;
+}
+
+
+void Canvas2D::updateCanvas(std::vector<RGBA> &target) {
+    for (int i = 0; i<m_data.size(); i++) {
+        m_data[i] = target[i];
+    }
+}
+
+
+
+
+std::vector<float> Canvas2D::createBlurFilter() {
+    int size = settings.blurRadius*2 + 1;
+    std::vector<float> filter(size);
+    float sigma = settings.blurRadius / 3.0;
+    float norm = 0.0;
+    for(int i = 0; i < size; i++) {
+        float x = i - settings.blurRadius;
+        filter[i] = (1/(sqrt(2*M_PI*pow(sigma, 2)))) * (exp(-(pow(x,2) / (2 * pow(sigma, 2)))));
+    }
+
+    return filter;
+}
+
+RGBA Canvas2D::getPixelReflected(std::vector<RGBA> &data, int width, int height, int x, int y) {
+    int newX;
+    int newY;
+    if (x<0) {
+        newX = -x;
+    } else if (x>=width) {
+        newX = (width-1)-(x % width);
+    } else {
+        newX = x;
+    }
+
+    if (y<0) {
+        newY = -y;
+    } else if (y>=height) {
+        newY = (height-1)-(x % height);
+    } else {
+        newY = y;
+    }
+    return data[width * newY + newX];
+}
+
+std::vector<RGBA> Canvas2D::convolve2D(std::vector<RGBA> &data, std::vector<float> &filter, int filter_width, int filter_height, bool edge_flag) {
+    std::vector<RGBA> result(data.size());
+
+    for (int r = 0; r < m_height; r++) {
+        for (int c = 0; c < m_width; c++) {
+            size_t centerIndex = r * m_width + c;
+
+            float redAcc = 0;
+            float greenAcc = 0;
+            float blueAcc = 0;
+            float weights_sum = 0.0;
+
+            for (int row = filter_height-1; row>=0; row--) {
+                for (int col = filter_width-1; col>=0; col--) {
+                    RGBA canvas_color;
+                    int shift_row = filter_height/2-row;
+                    int shift_col = filter_width/2-col;
+
+                    int canvas_row = r+shift_row;
+                    int canvas_col = c+shift_col;
+
+                    if (canvas_row>=0 && canvas_row<m_height && canvas_col>=0 && canvas_col<m_width) {
+                        canvas_color = data[canvas_row*m_width + canvas_col];
+                    } else {
+                        canvas_color = getPixelReflected(data, m_width, m_height, canvas_col, canvas_row);
+                    }
+
+                    int filter_index = row*filter_width+col;
+
+                    weights_sum += filter[filter_index];
+
+                    redAcc += filter[filter_index] * canvas_color.r;
+                    greenAcc += filter[filter_index] * canvas_color.g;
+                    blueAcc += filter[filter_index] * canvas_color.b;
+                }
+            }
+            if (edge_flag) {
+                redAcc = abs(redAcc) > 255 ? 255 : abs(redAcc);
+                greenAcc = abs(greenAcc) > 255 ? 255 : abs(greenAcc);
+                blueAcc = abs(blueAcc) > 255 ? 255 : abs(blueAcc);
+                result[centerIndex] = RGBA{floatToUint8(redAcc/255), floatToUint8(greenAcc/255), floatToUint8(blueAcc/255), 255};
+            } else {
+                result[centerIndex] = RGBA{floatToUint8(redAcc/255/weights_sum), floatToUint8(greenAcc/255/weights_sum), floatToUint8(blueAcc/255/weights_sum), 255};
+            }
+         }
+    }
+    return result;
+}
+
+float _gaussian(float x, double sigma) {
+    return (1/(sqrt(2*M_PI*pow(sigma, 2)))) * (exp(-(pow(x,2) / (2 * pow(sigma, 2)))));
+}
+
+float _distance(int r, int c, int n_r, int n_c) {
+    return sqrt(pow(r - n_r, 2) + pow(c - n_c, 2));
+}
+
+void Canvas2D::apply_bilateral(vector<RGBA> &m_data, vector<RGBA> &result, int row, int col, double sigma_s, double sigma_r, int radius) {
+    float acc_red = 0;
+    float acc_green = 0;
+    float acc_blue = 0;
+    float Wp_r = 0;
+    float Wp_g = 0;
+    float Wp_b = 0;
+
+    int origin_idx = row*m_width+col;
+
+    for (int r = -radius; r<=radius; r++) {
+        for (int c = -radius; c<=radius; c++) {
+            int n_r = row+r;
+            int n_c = col+c;
+
+            if (!(n_r>=0 && n_r<m_height && n_c>=0 && n_c<m_width)) {
+                continue;
+            }
+            int cur_idx = n_r*m_width+n_c;
+
+            auto space_gaussian = _gaussian(_distance(row, col, n_r, n_c), sigma_s);
+            auto range_gaussian_r = _gaussian(m_data[origin_idx].r/255.0-m_data[cur_idx].r/255.0, sigma_r);
+            auto range_gaussian_g = _gaussian(m_data[origin_idx].g/255.0-m_data[cur_idx].g/255.0, sigma_r);
+            auto range_gaussian_b = _gaussian(m_data[origin_idx].b/255.0-m_data[cur_idx].b/255.0, sigma_r);
+
+            acc_red += (m_data[cur_idx].r/255.0)*(space_gaussian*range_gaussian_r);
+            acc_blue += (m_data[cur_idx].b/255.0)*(space_gaussian*range_gaussian_b);
+            acc_green += (m_data[cur_idx].g/255.0)*(space_gaussian*range_gaussian_g);
+
+            Wp_r += space_gaussian*range_gaussian_r;
+            Wp_g += space_gaussian*range_gaussian_g;
+            Wp_b += space_gaussian*range_gaussian_b;
+        }
+    }
+
+    acc_red /= Wp_r;
+    acc_green /= Wp_g;
+    acc_blue /= Wp_b;
+    result[origin_idx] = {float2int(acc_red), float2int(acc_green), float2int(acc_blue), 255};
+}
+
+std::vector<RGBA> Canvas2D::convolve2D_bilateral(std::vector<RGBA> &data, int radius, double sigma_s, double sigma_r) {
+    std::vector<RGBA> result(data.size());
+
+    for (int r = 0; r < m_height; r++) {
+        for (int c = 0; c < m_width; c++) {
+            apply_bilateral(m_data, result, r, c, sigma_s, sigma_r, radius);
+         }
+    }
+    return result;
+}
+
+
 
 /**
  * @brief Called when any of the parameters in the UI are modified.
@@ -257,8 +635,8 @@ void Canvas2D::updateBrush(Settings settings) {
             }
         }
         break;
-    case BRUSH_ERASER_CONNECTED:
-      break;
+      case BRUSH_ERASER_CONNECTED:
+        break;
       default:
         std::cout << "INVALID BRUSH TYPE";
     }
